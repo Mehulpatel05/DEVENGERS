@@ -145,10 +145,74 @@ function capitalizeSkill(str) {
   return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+// Multi-LLM API Integration Engine (Cohere API -> Anthropic API -> Gemini API -> Smart Fallback)
 async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
+  const cohereKey = process.env.COHERE_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
+  // 1. Cohere API Integration
+  if (cohereKey) {
+    try {
+      const response = await fetch('https://api.cohere.com/v2/chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cohereKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'command-r-plus',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: `RESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescriptionText}` }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data.message?.content?.[0]?.text || '';
+        try {
+          return JSON.parse(rawText.replace(/```json|```/g, '').trim());
+        } catch (e) {
+          if (retryCount < 1) {
+            return await callLLM(resumeText, jobDescriptionText, retryCount + 1);
+          }
+        }
+      } else {
+        // Fallback to Cohere v1 API endpoint
+        const v1Response = await fetch('https://api.cohere.ai/v1/chat', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cohereKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'command-r-plus',
+            preamble: SYSTEM_PROMPT,
+            message: `RESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescriptionText}`
+          })
+        });
+
+        if (v1Response.ok) {
+          const v1Data = await v1Response.json();
+          const rawText = v1Data.text || '';
+          try {
+            return JSON.parse(rawText.replace(/```json|```/g, '').trim());
+          } catch (e) {
+            if (retryCount < 1) {
+              return await callLLM(resumeText, jobDescriptionText, retryCount + 1);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Cohere API Error:', err.message);
+    }
+  }
+
+  // 2. Anthropic API Fallback
   if (anthropicKey) {
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -187,6 +251,7 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
     }
   }
 
+  // 3. Gemini API Fallback
   if (geminiKey) {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
@@ -215,6 +280,7 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
     }
   }
 
+  // 4. Smart Local Fallback Analyzer
   return generateSmartAnalysis(resumeText, jobDescriptionText);
 }
 

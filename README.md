@@ -19,6 +19,7 @@
 
 ## ✨ Features
 
+- **🤖 Cohere AI Integration**: Powered by Cohere's `command-r-plus` model (`COHERE_API_KEY`) with fallback support for Anthropic Claude, Gemini, and offline smart analysis.
 - **⚡ 1-Click Demo Presets**: Pre-loaded buttons on `/scan` (`Senior Frontend`, `Product Manager`, `Full Stack`) for instant 1-click scanning during demos.
 - **📄 Client-Side File Extraction**: Drag-and-drop `.pdf`, `.docx`, and `.txt` files directly into the analyzer panel.
 - **🔍 Live Keyword Ticker**: Real-time overlapping keyword counter badge above the submit button.
@@ -39,7 +40,7 @@
 ├── .env.example            # Environment variables template
 ├── .gitignore              # Git ignore configuration
 ├── backend/
-│   └── server.js           # REST API endpoint (/api/analyze) & Static file server
+│   └── server.js           # REST API endpoint (/api/analyze) with Cohere LLM integration
 └── public/
     ├── index.html          # Main HTML5 entry point
     ├── css/
@@ -65,11 +66,11 @@
    cd DEVENGERS
    ```
 
-2. **Set Environment Variables (Optional)**:
+2. **Set Environment Variables**:
    Create a `.env` file from `.env.example`:
    ```env
    PORT=5000
-   ANTHROPIC_API_KEY=your_anthropic_api_key_here
+   COHERE_API_KEY=your_cohere_api_key_here
    ```
    *(Note: If no API key is set, Signal uses its built-in smart analyzer engine offline seamlessly!)*
 
@@ -92,7 +93,7 @@ Signal is structured as a unified Node.js service, making deployment on **Render
 ### Step 1: Push to GitHub
 ```bash
 git add .
-git commit -m "Deploy Signal AI Resume Scanner"
+git commit -m "Add Cohere API integration"
 git push origin main
 ```
 
@@ -102,17 +103,18 @@ git push origin main
 3. Configure the settings:
    - **Name**: `signal-ai-resume-scanner`
    - **Region**: Oregon (or closest to your audience)
-   - **Branch**: `main` or `master`
+   - **Branch**: `main`
    - **Root Directory**: `.` *(leave blank)*
    - **Runtime**: `Node`
    - **Build Command**: *(leave blank or `npm install`)*
    - **Start Command**: `npm start`
 4. **Environment Variables**:
-   - Add `ANTHROPIC_API_KEY` (Value: your Anthropic API Key)
-   - Render automatically assigns the `PORT` variable.
+   - Key: `COHERE_API_KEY`
+   - Value: *(your Cohere API key)*
+   *(Render automatically assigns the `PORT` variable).*
 5. Click **Create Web Service**.
 
-Once deployed, Render will provide a live URL (e.g. `https://signal-ai-resume-scanner.onrender.com`) running both the backend REST API and the frontend SPA seamlessly!
+Once deployed, Render will provide a live URL (e.g. `https://signal-ai-resume-scanner.onrender.com`) running both the Cohere-powered backend REST API and the frontend SPA seamlessly!
 
 ---
 
