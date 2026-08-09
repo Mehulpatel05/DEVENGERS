@@ -1,0 +1,23 @@
+{
+  "name": "signal-ai-resume-scanner",
+  "version": "1.0.0",
+  "description": "Signal — AI Resume & Job-Match Scanner (Hack Devengers 1.0)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "keywords": [
+    "resume-scanner",
+    "ats-analyzer",
+    "job-match",
+    "ai",
+    "anthropic",
+    "claude"
+  ],
+  "author": "Hack Devengers 1.0",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
