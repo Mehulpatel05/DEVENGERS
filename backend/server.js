@@ -5,15 +5,15 @@ const url = require('url');
 
 const PORT = process.env.PORT || 5000;
 
-// Resolve static directory containing index.html
+// Resolve static directory containing index.html and js/app.js
 let PUBLIC_DIR = path.resolve(__dirname, '../frontend');
-if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+if (!fs.existsSync(path.join(PUBLIC_DIR, 'js/app.js'))) {
   PUBLIC_DIR = path.resolve(__dirname, '../public');
 }
-if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+if (!fs.existsSync(path.join(PUBLIC_DIR, 'js/app.js'))) {
   PUBLIC_DIR = path.resolve(process.cwd(), 'frontend');
 }
-if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+if (!fs.existsSync(path.join(PUBLIC_DIR, 'js/app.js'))) {
   PUBLIC_DIR = path.resolve(process.cwd(), 'public');
 }
 
@@ -145,13 +145,11 @@ function capitalizeSkill(str) {
   return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-// Multi-LLM API Integration Engine (Cohere API -> Anthropic API -> Gemini API -> Smart Fallback)
 async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
   const cohereKey = process.env.COHERE_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  // 1. Cohere API Integration
   if (cohereKey) {
     try {
       const response = await fetch('https://api.cohere.com/v2/chat', {
@@ -181,7 +179,6 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
           }
         }
       } else {
-        // Fallback to Cohere v1 API endpoint
         const v1Response = await fetch('https://api.cohere.ai/v1/chat', {
           method: 'POST',
           headers: {
@@ -212,7 +209,6 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
     }
   }
 
-  // 2. Anthropic API Fallback
   if (anthropicKey) {
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -251,7 +247,6 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
     }
   }
 
-  // 3. Gemini API Fallback
   if (geminiKey) {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
@@ -280,7 +275,6 @@ async function callLLM(resumeText, jobDescriptionText, retryCount = 0) {
     }
   }
 
-  // 4. Smart Local Fallback Analyzer
   return generateSmartAnalysis(resumeText, jobDescriptionText);
 }
 
@@ -350,15 +344,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Serve Static Frontend Files
+  // Serve Static Frontend Files with SPA routing support
+  const ext = path.extname(parsedUrl.pathname);
   let reqPath = parsedUrl.pathname === '/' ? '/index.html' : parsedUrl.pathname;
   let filePath = path.join(PUBLIC_DIR, reqPath);
 
-  if (!fs.existsSync(filePath) || (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory())) {
-    filePath = path.join(PUBLIC_DIR, 'index.html');
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    // Only fallback to index.html for SPA route requests (when no file extension is present)
+    if (!ext) {
+      filePath = path.join(PUBLIC_DIR, 'index.html');
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('File Not Found');
+      return;
+    }
   }
 
-  const ext = path.extname(filePath);
   const mimeTypes = {
     '.html': 'text/html',
     '.js': 'application/javascript',
@@ -370,7 +371,8 @@ const server = http.createServer(async (req, res) => {
     '.ico': 'image/x-icon'
   };
 
-  const contentType = mimeTypes[ext] || 'text/plain';
+  const fileExt = path.extname(filePath);
+  const contentType = mimeTypes[fileExt] || 'text/plain';
   res.writeHead(200, { 'Content-Type': contentType });
   fs.createReadStream(filePath).pipe(res);
 });
